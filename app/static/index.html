@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC Video Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Auth forms */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+
+        .auth-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 400px;
+        }
+
+        .auth-box h2 {
+            margin-bottom: 30px;
+            color: #333;
+            text-align: center;
+        }
+
+        .auth-box input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .auth-box button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .auth-box button:hover {
+            transform: translateY(-2px);
+            background: #5a67d8;
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+            color: #667eea;
+            cursor: pointer;
+        }
+
+        /* Main chat interface */
+        .chat-main {
+            display: none;
+        }
+
+        .chat-header {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Rooms list view */
+        .rooms-view {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .rooms-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .create-room-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .create-room-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .rooms-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .room-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .room-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .room-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .room-card p {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .room-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .member-count {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .join-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .join-btn:hover {
+            background: #218838;
+        }
+
+        /* Chat room view */
+        .chat-room-view {
+            display: none;
+        }
+
+        .room-info {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .back-btn:hover {
+            background: #5a6268;
+        }
+
+        .chat-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .video-container {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .video-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        video {
+            width: 100%;
+            background: #333;
+            border-radius: 8px;
+            min-height: 240px;
+        }
+
+        .video-label {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .chat-box {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messages {
+            flex: 1;
+            height: 500px;
+            overflow-y: scroll;
+            padding: 15px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.received {
+            background: #f1f3f5;
+            color: black;
+        }
+
+        .message.system {
+            background: #fff3cd;
+            color: #856404;
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .message-username {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .message-time {
+            font-size: 10px;
+            margin-top: 4px;
+            opacity: 0.7;
+        }
+
+        .controls {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .controls input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .user-list {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .user-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .call-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .camera-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .camera-controls button {
+            flex: 1;
+            padding: 8px;
+            background: #6c757d;
+        }
+
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Auth Container -->
+        <div id="authContainer" class="auth-container">
+            <div class="auth-box">
+                <h2 id="authTitle">Login</h2>
+                <input type="text" id="username" placeholder="Username">
+                <input type="email" id="email" placeholder="Email" style="display: none;">
+                <input type="password" id="password" placeholder="Password">
+                <button id="authButton" onclick="login()">Login</button>
+                <div class="auth-switch" onclick="toggleAuth()">
+                    Don't have an account? Register
+                </div>
+                <div id="authError" class="error"></div>
+            </div>
+        </div>
+
+        <!-- Main Chat Interface -->
+        <div id="chatMain" class="chat-main">
+            <div class="chat-header">
+                <h2>WebRTC Video Chat</h2>
+                <div class="user-info">
+                    <span id="currentUsername"></span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Rooms List View -->
+            <div id="roomsView" class="rooms-view">
+                <div class="rooms-header">
+                    <h3>Chat Rooms</h3>
+                </div>
+                <div class="create-room-form">
+                    <input type="text" id="newRoomName" placeholder="Create new room...">
+                    <button onclick="createRoom()">Create Room</button>
+                </div>
+                <div id="roomsList" class="rooms-list">
+                    <div class="loading">Loading rooms...</div>
+                </div>
+            </div>
+
+            <!-- Chat Room View -->
+            <div id="chatRoomView" class="chat-room-view">
+                <div class="room-info">
+                    <div>
+                        <h3 id="currentRoomName"></h3>
+                        <small id="roomDescription"></small>
+                    </div>
+                    <button class="back-btn" onclick="leaveRoom()">← Back to Rooms</button>
+                </div>
+
+                <div class="chat-container">
+                    <div class="video-container">
+                        <h3>Video Calls</h3>
+                        <div id="localVideo">
+                            <div class="video-wrapper">
+                                <video id="localVideoElement" autoplay muted playsinline></video>
+                                <div class="video-label">You (Local)</div>
+                            </div>
+                        </div>
+                        <div id="remoteVideos"></div>
+                        <div class="camera-controls">
+                            <button onclick="toggleCamera()">Toggle Camera</button>
+                            <button onclick="toggleMicrophone()">Toggle Mic</button>
+                        </div>
+                    </div>
+
+                    <div class="chat-box">
+                        <div id="messages"></div>
+                        <div class="controls">
+                            <input type="text" id="messageInput" placeholder="Type a message...">
+                            <button onclick="sendMessage()">Send</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-list">
+                    <h3>Users in room</h3>
+                    <div id="userList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = null;
+        let myUsername = null;
+        let currentRoom = null;
+        let ws = null;
+        let myUserId = null;
+        let localStream = null;
+        let peerConnections = {};
+        let cameraEnabled = true;
+        let micEnabled = true;
+
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        // Auth functions
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showAuthError('Please fill all fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    token = data.access_token;
+                    myUsername = username;
+                    showChatInterface();
+                    loadRooms();
+                } else {
+                    const error = await response.json();
+                    showAuthError(error.detail || 'Login failed');
+                }
+            } catch (error) {
+                showAuthError('Connection error');
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !email || !password) {
+                showAuthError('Please fill all fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                if (response.ok) {
+                    await login();
+                } else {
+                    const error = await response.json();
+                    showAuthError(error.detail || 'Registration failed');
+                }
+            } catch (error) {
+                showAuthError('Connection error');
+            }
+        }
+
+        function toggleAuth() {
+            const title = document.getElementById('authTitle');
+            const emailField = document.getElementById('email');
+            const authBtn = document.getElementById('authButton');
+
+            if (title.textContent === 'Login') {
+                title.textContent = 'Register';
+                emailField.style.display = 'block';
+                authBtn.innerHTML = 'Register';
+                authBtn.onclick = register;
+                document.querySelector('.auth-switch').innerHTML = 'Already have an account? Login';
+            } else {
+                title.textContent = 'Login';
+                emailField.style.display = 'none';
+                authBtn.innerHTML = 'Login';
+                authBtn.onclick = login;
+                document.querySelector('.auth-switch').innerHTML = "Don't have an account? Register";
+            }
+            document.getElementById('authError').textContent = '';
+        }
+
+        function showAuthError(message) {
+            document.getElementById('authError').textContent = message;
+        }
+
+        function showChatInterface() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('chatMain').style.display = 'block';
+            document.getElementById('currentUsername').textContent = myUsername;
+            enableCamera();
+        }
+
+        // Rooms functions
+        async function loadRooms() {
+            try {
+                const response = await fetch('/api/rooms', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const rooms = await response.json();
+                    displayRooms(rooms);
+                }
+            } catch (error) {
+                console.error('Error loading rooms:', error);
+            }
+        }
+
+        function displayRooms(rooms) {
+            const roomsList = document.getElementById('roomsList');
+
+            if (rooms.length === 0) {
+                roomsList.innerHTML = '<div class="empty-state">No rooms yet. Create one!</div>';
+                return;
+            }
+
+            roomsList.innerHTML = rooms.map(room => `
+                <div class="room-card" onclick="joinRoom('${room.name}')">
+                    <h3>${escapeHtml(room.name)}</h3>
+                    <p>${escapeHtml(room.description || 'No description')}</p>
+                    <div class="room-meta">
+                        <span class="member-count">👥 ${room.member_count || 0} members</span>
+                        <button class="join-btn" onclick="event.stopPropagation(); joinRoom('${room.name}')">
+                            Join Room
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function createRoom() {
+            const roomName = document.getElementById('newRoomName').value.trim();
+            if (!roomName) {
+                alert('Please enter a room name');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name: roomName })
+                });
+
+                if (response.ok) {
+                    document.getElementById('newRoomName').value = '';
+                    loadRooms();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to create room');
+                }
+            } catch (error) {
+                console.error('Error creating room:', error);
+            }
+        }
+
+        async function joinRoom(roomName) {
+            currentRoom = roomName;
+            document.getElementById('currentRoomName').textContent = roomName;
+
+            // Переключаемся на вид чата
+            document.getElementById('roomsView').style.display = 'none';
+            document.getElementById('chatRoomView').style.display = 'block';
+
+            // Подключаемся к WebSocket
+            await connectToRoom(roomName);
+        }
+
+        function leaveRoom() {
+            // Закрываем WebSocket
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+
+            // Очищаем видео
+            for (let userId in peerConnections) {
+                peerConnections[userId].close();
+            }
+            peerConnections = {};
+            document.getElementById('remoteVideos').innerHTML = '';
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('userList').innerHTML = '';
+
+            // Возвращаемся к списку комнат
+            document.getElementById('chatRoomView').style.display = 'none';
+            document.getElementById('roomsView').style.display = 'block';
+            currentRoom = null;
+
+            // Перезагружаем список комнат
+            loadRooms();
+        }
+
+        // WebSocket and chat functions
+        async function connectToRoom(roomName) {
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            ws = new WebSocket(`ws://localhost:8000/ws/${roomName}?token=${token}`);
+
+            ws.onopen = () => {
+                addMessage('Connected to room: ' + roomName, 'system');
+            };
+
+            ws.onmessage = async (event) => {
+                const message = JSON.parse(event.data);
+                await handleWebSocketMessage(message);
+            };
+
+            ws.onclose = () => {
+                addMessage('Disconnected', 'system');
+                for (let userId in peerConnections) {
+                    peerConnections[userId].close();
+                }
+                peerConnections = {};
+                document.getElementById('remoteVideos').innerHTML = '';
+            };
+        }
+
+        async function handleWebSocketMessage(message) {
+            console.log('Received:', message);
+
+            switch(message.type) {
+                case 'init':
+                    myUserId = message.user_id;
+                    addMessage(`Connected as ${message.username}`, 'system');
+                    updateUserList(message.users);
+                    // Показываем историю сообщений
+                    if (message.history && message.history.length > 0) {
+                        message.history.forEach(msg => {
+                            addChatMessage(msg.username, msg.content, msg.timestamp, msg.username === myUsername);
+                        });
+                    }
+                    break;
+
+                case 'user_joined':
+                    addMessage(`${message.username} joined the room`, 'system');
+                    updateUserList(message.users);
+                    break;
+
+                case 'user_left':
+                    addMessage(`${message.username} left the room`, 'system');
+                    updateUserList(message.users);
+                    if (peerConnections[message.user_id]) {
+                        peerConnections[message.user_id].close();
+                        delete peerConnections[message.user_id];
+                        removeRemoteVideo(message.user_id);
+                    }
+                    break;
+
+                case 'chat':
+                    const isMine = message.user_id === myUserId;
+                    addChatMessage(message.username, message.content, message.timestamp, isMine);
+                    break;
+
+                case 'webrtc_offer':
+                    await handleOffer(message.from_user_id, message.from_username, message.sdp);
+                    break;
+
+                case 'webrtc_answer':
+                    await handleAnswer(message.from_user_id, message.sdp);
+                    break;
+
+                case 'ice_candidate':
+                    await handleIceCandidate(message.from_user_id, message.candidate);
+                    break;
+            }
+        }
+
+        // WebRTC functions (оставляем без изменений)
+        async function createPeerConnection(targetUserId, targetUsername) {
+            const pc = new RTCPeerConnection(configuration);
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({
+                        type: 'ice_candidate',
+                        target_session_id: targetUserId,
+                        candidate: event.candidate
+                    }));
+                }
+            };
+
+            pc.ontrack = (event) => {
+                const remoteVideo = createRemoteVideo(targetUserId, targetUsername);
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            peerConnections[targetUserId] = pc;
+            return pc;
+        }
+
+        async function startCall(targetUserId, targetUsername) {
+            if (!localStream) {
+                await enableCamera();
+            }
+
+            const pc = await createPeerConnection(targetUserId, targetUsername);
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            ws.send(JSON.stringify({
+                type: 'webrtc_offer',
+                target_session_id: targetUserId,
+                sdp: offer
+            }));
+        }
+
+        async function handleOffer(fromUserId, fromUsername, sdp) {
+            const pc = await createPeerConnection(fromUserId, fromUsername);
+            await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            ws.send(JSON.stringify({
+                type: 'webrtc_answer',
+                target_session_id: fromUserId,
+                sdp: answer
+            }));
+        }
+
+        async function handleAnswer(fromUserId, sdp) {
+            const pc = peerConnections[fromUserId];
+            if (pc) {
+                await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+            }
+        }
+
+        async function handleIceCandidate(fromUserId, candidate) {
+            const pc = peerConnections[fromUserId];
+            if (pc) {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        }
+
+        async function enableCamera() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+
+                const localVideo = document.getElementById('localVideoElement');
+                localVideo.srcObject = localStream;
+
+                addMessage('Camera and microphone enabled', 'system');
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                addMessage('Error accessing camera/microphone: ' + error.message, 'system');
+            }
+        }
+
+        function toggleCamera() {
+            if (localStream) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    cameraEnabled = !cameraEnabled;
+                    videoTrack.enabled = cameraEnabled;
+                    addMessage(`Camera ${cameraEnabled ? 'enabled' : 'disabled'}`, 'system');
+                }
+            }
+        }
+
+        function toggleMicrophone() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    micEnabled = !micEnabled;
+                    audioTrack.enabled = micEnabled;
+                    addMessage(`Microphone ${micEnabled ? 'enabled' : 'disabled'}`, 'system');
+                }
+            }
+        }
+
+        function createRemoteVideo(userId, username) {
+            let remoteVideosDiv = document.getElementById('remoteVideos');
+            let videoWrapper = document.getElementById(`remote-${userId}`);
+
+            if (!videoWrapper) {
+                videoWrapper = document.createElement('div');
+                videoWrapper.className = 'video-wrapper';
+                videoWrapper.id = `remote-${userId}`;
+
+                const video = document.createElement('video');
+                video.id = `remoteVideo-${userId}`;
+                video.autoplay = true;
+                video.playsInline = true;
+
+                const label = document.createElement('div');
+                label.className = 'video-label';
+                label.textContent = username;
+
+                videoWrapper.appendChild(video);
+                videoWrapper.appendChild(label);
+                remoteVideosDiv.appendChild(videoWrapper);
+            }
+
+            return document.getElementById(`remoteVideo-${userId}`);
+        }
+
+        function removeRemoteVideo(userId) {
+            const videoWrapper = document.getElementById(`remote-${userId}`);
+            if (videoWrapper) {
+                videoWrapper.remove();
+            }
+        }
+
+        function updateUserList(users) {
+            const userListDiv = document.getElementById('userList');
+            userListDiv.innerHTML = '';
+
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = user.username + (user.user_id === myUserId ? ' (You)' : '');
+
+                const controlsDiv = document.createElement('div');
+
+                if (user.user_id !== myUserId) {
+                    const callButton = document.createElement('button');
+                    callButton.className = 'call-btn';
+                    callButton.textContent = 'Video Call';
+                    callButton.onclick = () => startCall(user.session_id, user.username);
+                    controlsDiv.appendChild(callButton);
+                }
+
+                userDiv.appendChild(nameSpan);
+                userDiv.appendChild(controlsDiv);
+                userListDiv.appendChild(userDiv);
+            });
+        }
+
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('Not connected!', 'system');
+                return;
+            }
+
+            const input = document.getElementById('messageInput');
+            const content = input.value;
+
+            if (!content) return;
+
+            ws.send(JSON.stringify({
+                type: 'chat',
+                content: content,
+                timestamp: new Date().toISOString()
+            }));
+
+            input.value = '';
+        }
+
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+
+            const textSpan = document.createElement('div');
+            textSpan.textContent = text;
+
+            const timeSpan = document.createElement('div');
+            timeSpan.className = 'message-time';
+            timeSpan.textContent = new Date().toLocaleTimeString();
+
+            messageDiv.appendChild(textSpan);
+            messageDiv.appendChild(timeSpan);
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addChatMessage(username, content, timestamp, isMine) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isMine ? 'sent' : 'received'}`;
+
+            if (!isMine) {
+                const usernameSpan = document.createElement('div');
+                usernameSpan.className = 'message-username';
+                usernameSpan.textContent = username;
+                messageDiv.appendChild(usernameSpan);
+            }
+
+            const textSpan = document.createElement('div');
+            textSpan.textContent = content;
+
+            const timeSpan = document.createElement('div');
+            timeSpan.className = 'message-time';
+            timeSpan.textContent = new Date(timestamp).toLocaleTimeString();
+
+            messageDiv.appendChild(textSpan);
+            messageDiv.appendChild(timeSpan);
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function logout() {
+            token = null;
+            myUsername = null;
+            if (ws) ws.close();
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('authContainer').style.display = 'flex';
+            document.getElementById('chatMain').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('roomsView').style.display = 'block';
+            document.getElementById('chatRoomView').style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Инициализация
+        enableCamera();
+    </script>
+</body>
+</html>

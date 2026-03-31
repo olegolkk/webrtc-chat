@@ -47,13 +47,13 @@ Thumbs.db
 .coverage
 htmlcov/
 
-# Production
-static/
-dist/
-build/
-
 # Secrets
 secrets/
 *.key
 *.pem
 *.crt
+
+# Static files - НО! Исключаем index.html
+static/*
+!static/index.html
+!static/README.md
