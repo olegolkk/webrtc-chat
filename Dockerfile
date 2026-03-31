@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 # Копируем requirements
 COPY requirements.txt .
 
-# Устанавливаем зависимости в отдельную папку
-RUN pip install --user --no-cache-dir -r requirements.txt
+# Устанавливаем зависимости в системную папку, не в пользовательскую
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Финальный образ
 FROM python:3.11-slim
@@ -27,25 +27,22 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем зависимости из builder
-COPY --from=builder /root/.local /root/.local
+# Копируем зависимости из builder в системную папку
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Копируем код приложения
 COPY . .
 
-# Копируем скрипты
-COPY scripts/ /app/scripts/
-
 # Создаем папки
 RUN mkdir -p static logs data
 
-# Настройка PATH
-ENV PATH=/root/.local/bin:$PATH
-
-# Создаем непривилегированного пользователя
+# Создаем непривилегированного пользователя с правильными правами
 RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    chmod -R 755 /app
 
+# Переключаемся на пользователя appuser
 USER appuser
 
 # Expose порт
